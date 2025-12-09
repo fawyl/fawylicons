@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unicode Icon Picker</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --btn-bg: #1e1e1e;
+            --btn-hover: #2c2c2c;
+            --text-color: #e0e0e0;
+            --accent: #ec4899;
+            --btn-image: none;
+            --btn-overlay: rgba(30, 30, 30, 0.85);
+            --control-bg: #1e1e1e;
+            --input-border: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 3rem;
+            font-weight: 300;
+            color: #ffffff;
+            letter-spacing: 2px;
+        }
+
+        p {
+            color: #a0a0a0;
+            margin: 0;
+            font-weight: 300;
+        }
+
+        .controls {
+            margin-bottom: 40px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+            border: 1px solid #333;
+        }
+
+        .controls input {
+            padding: 12px;
+            background: #252525;
+            border: 1px solid var(--input-border);
+            color: white;
+            border-radius: 8px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .controls button {
+            padding: 12px 25px;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+
+        .controls button:hover {
+            background-color: #db2777;
+            transform: translateY(-1px);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1400px;
+        }
+
+        .icon-btn {
+            aspect-ratio: 1;
+            background-color: transparent; /* No background color */
+            border: none; /* No border */
+            border-radius: 0; /* No radius needed if it's just the sprite */
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: none; /* No shadow */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: visible; /* Allow effects to spill */
+            
+            /* Customization logic */
+            background-image: url('glyph_E1.png');
+            background-size: 1600% 1600%; /* 16 columns -> 1600% */
+            image-rendering: pixelated; /* Keep pixel art crisp */
+            
+            /* Make buttons bigger to see pixel art better */
+            min-width: 128px; 
+            min-height: 128px;
+        }
+
+        .icon-btn:hover {
+            transform: scale(1.2); /* Just grow */
+            filter: drop-shadow(0 0 8px var(--glow-color, var(--accent))); /* Glow effect using custom prop */
+            background-color: transparent;
+            box-shadow: none;
+            border: none;
+            z-index: 10;
+        }
+
+        .icon-btn:active {
+            transform: scale(0.95);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #000;
+            padding: 12px 30px;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+            font-weight: 600;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* File input styling */
+        .file-upload-label {
+            display: inline-block;
+            padding: 12px 20px;
+            background-color: #252525;
+            border: 1px solid #333;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #aaa;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .file-upload-label:hover {
+            background-color: #333;
+            border-color: #555;
+            color: #fff;
+        }
+        #bg-file {
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Tag Picker</h1>
+        <p>Click any icon to copy it to your clipboard.</p>
+    </header>
+
+    <div class="controls">
+        <!-- Removed Randomize button as the tags are now fixed to codes -->
+    </div>
+
+    <div class="grid" id="icon-grid">
+        <!-- Buttons will be generated here -->
+    </div>
+
+    <div class="toast" id="toast">Copied to clipboard!</div>
+
+    <script>
+        const grid = document.getElementById('icon-grid');
+        const toast = document.getElementById('toast');
+        
+        // Sprite configuration
+        const TOTAL_SPRITES = 256; // 16x16 grid
+        const COLS = 16;
+        
+        // CJK Unified Ideographs block: 4E00-9FFF
+        const CJK_START = 0x4E00;
+        const CJK_END = 0x9FFF;
+        const CJK_RANGE = CJK_END - CJK_START;
+
+        // Auto-generated colors from sprite analysis
+        const spriteColors = ['#BB0007', '#04102B', '#440405', '#A52F2A', '#FFC300', '#FEFFFF', '#FDFFF9', '#000000', '#D2000D', '#FF8500', '#0D0C0D', '#0D0C0D', '#7A5540', '#FBF456', '#003912', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#FF0026', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#1D6300', '#00FF99', '#2A8F00', '#0D0C0D', '#6DDAFF', '#009DFF', '#B9D0F5', '#000000', '#6949FF', '#21006B', '#E6D8FF', '#D29BF9', '#7C32C9', '#2D3160', 
+'#FF65EA', '#FFFFFF', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#B2F7FF', '#000000', '#000000', '#C8C7C8', '#000000', '#000000', '#FF66ED', '#A5EEF0', '#00818C', '#FFC1F7', '#BA00A5', '#F2FFFC', '#00600B', '#FF4F9E', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#000000', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', 
+'#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', 
+'#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026', '#FF0026'];
+
+        const BASE_CODE = 0xE100;
+
+        function getGlyphChar(index) {
+            // Index is 0 to 255. 
+            // 0 -> E100
+            // 255 -> E1FF
+            return String.fromCharCode(BASE_CODE + index);
+        }
+
+        function createButtons() {
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < TOTAL_SPRITES; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'icon-btn';
+                
+                // Calculate char code based on index
+                const char = getGlyphChar(i);
+                const hexCode = (BASE_CODE + i).toString(16).toUpperCase();
+                
+                btn.dataset.char = char;
+                btn.dataset.code = hexCode;
+                btn.title = `Copy ${hexCode}`;
+                
+                // Calculate background position
+                // col index = i % COLS
+                // row index = floor(i / COLS)
+                const col = i % COLS;
+                const row = Math.floor(i / COLS);
+                
+                // Percentage calculation: (index / (total - 1)) * 100%
+                // For 16 items, indices are 0..15.
+                const xPos = (col / (COLS - 1)) * 100;
+                const yPos = (row / (COLS - 1)) * 100;
+                
+                btn.style.backgroundPosition = `${xPos}% ${yPos}%`;
+                
+                // Set custom glow color
+                let glow = spriteColors[i];
+                // Fallback for black/empty colors to ensure visibility
+                if (!glow || glow === '#000000') {
+                    glow = 'var(--accent)';
+                }
+                btn.style.setProperty('--glow-color', glow);
+                
+                btn.addEventListener('click', () => {
+                    // Copy the actual character
+                    copyToClipboard(btn.dataset.char, btn.dataset.code);
+                });
+
+                grid.appendChild(btn);
+            }
+        }
+
+        // Copy functionality
+        async function copyToClipboard(text, code) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast(`Copied ${code} (${text})`);
+            } catch (err) {
+                // Fallback
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast(`Copied ${code}`);
+                } catch (err) {
+                    console.error('Failed to copy', err);
+                    showToast('Failed to copy');
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+
+        // Toast notification
+        let toastTimeout;
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // Initialize
+        createButtons();
+
+    </script>
+</body>
+</html>
+
