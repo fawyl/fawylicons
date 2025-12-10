@@ -17,9 +17,25 @@
             --input-border: #333;
         }
 
+        @keyframes pulse-border {
+            0% {
+                box-shadow: 0 0 15px -5px var(--accent), inset 0 0 15px -5px var(--accent);
+                border-color: rgba(236, 72, 153, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 30px 5px var(--accent), inset 0 0 30px 5px var(--accent);
+                border-color: var(--accent);
+            }
+            100% {
+                box-shadow: 0 0 15px -5px var(--accent), inset 0 0 15px -5px var(--accent);
+                border-color: rgba(236, 72, 153, 0.3);
+            }
+        }
+
         body {
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
+            background: linear-gradient(135deg, #1f1f1f 0%, #050505 100%);
+            background-attachment: fixed;
             color: var(--text-color);
             margin: 0;
             padding: 20px;
@@ -27,6 +43,9 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            box-sizing: border-box; /* Ensure border doesn't cause overflow */
+            border: 4px solid var(--accent);
+            animation: pulse-border 3s infinite ease-in-out;
         }
 
         header {
@@ -37,9 +56,15 @@
         h1 {
             margin: 0 0 10px 0;
             font-size: 3rem;
-            font-weight: 300;
+            font-weight: 800;
             color: #ffffff;
             letter-spacing: 2px;
+            transition: text-shadow 0.3s ease;
+            cursor: default;
+        }
+
+        h1:hover {
+            text-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent);
         }
 
         p {
@@ -186,7 +211,7 @@
 <body>
 
     <header>
-        <h1>Tag Picker</h1>
+        <h1>fawyl's Tag Selector</h1>
         <p>Click any icon to copy it to your clipboard.</p>
     </header>
 
